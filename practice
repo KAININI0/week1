@@ -198,5 +198,20 @@ contacts["美女a"] = "12345678945"
 此时会返回一个布尔值  
 ·删除键 del contacts["xiaoming"]
 想知道字典中有多少键值对，len  
+·字典名.keys/values/items()会返回所有键 /值/键值对 
 15.for循环  
 for 变量名 in 可迭代对象：  
+range(5,10)  range用来表示整数数列，括号里第一个数字表示起始值，最后一个数字表示结束值,结束值不在序列的范围内  
+range(5,10,2)第三个数字表示步长，也就是每次跨越几个数字，如果不指明时，默认为一 。当range中只放入了一个值，默认起始值为0，放入的为结束值
+16.whlie循环  
+while 条件A:
+    行动B  
+在条件何时结束未知的情况下，while比for更适合使用。当有明确循环对象或者次数时，多用for  
+17.format格式化  
+.format(year,name)#{}中的数字表示会被format中的第几个参数进行替换
+format也可以用关键词而不是位置来指定替换的对象
+也可以用f-字符串，在字符串前加前缀f，花括号中的内容会被直接求值，添加到字符串内，除了用字符串进行格式化之外，数字也可以对字符串进行格式化，
+用format时，打印数字不需要转换成字符串
+ gpa_dict = {"xiaoming":3.2,"xiaohua":3.8}
+ for name,gpa in gpa_dict.items():
+    print("{0}nihao,你的绩点为：{1:.2f}".format(name,gpa))#:.2f表示保留两位小数
