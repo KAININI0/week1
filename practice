@@ -1,3 +1,350 @@
+#代码
+'''python
+#结构一个核心类，一个处理函数，加测试
+#初始化，判断坐标系是否合法，坐标系转移，投影，夹角，面积体积缩放，读取json，执行任务
+#_init_是类的构造函数，也就是初始化方法，basis基向量矩阵（坐标系的轴），vectors要变换的向量
+# dim空间维度（2D/3D/...）
+#basis_count基向量数量
+import numpy as np
+import json
+data = [
+    {
+        "group_name": "2d_task_1",
+        "vectors": [[1,3],[1,2],[2,4],[3,1],[4,3],[5,5],[6,2],[7,7],[8,6],[9,8],[10,9]],
+        "ori_axis": [[1,0],[0,1]],
+        "tasks": [
+            { "type": "axis_angle" },
+            { "type": "change_axis", "obj_axis": [[2,1],[1,2]] },
+            { "type": "area" },
+            { "type": "axis_projection" },
+            { "type": "axis_angle"}
+        ]
+    },
+    {
+        "group_name": "2d_task_2",
+        "vectors": [[1,1],[2,0],[3,5],[4,2],[5,7],[6,4],[7,9],[8,6],[9,1],[10,8],[11,3],[12,10]],
+        "ori_axis": [[1,1],[1,-1]],
+        "tasks": [
+            { "type": "area" },
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[3,2],[2,-3]] },
+            { "type": "axis_projection"},
+            { "type": "change_axis", "obj_axis": [[1,0],[0,1]] },
+            { "type": "area"},
+            { "type": "axis_angle" }
+        ]
+    },
+    {
+        "group_name": "2d_task_3",
+        "vectors": [[0,5],[1,4],[2,3],[3,2],[4,1],[5,0],[6,-1],[7,-2],[8,-3],[9,-4],[10,-5],[11,-6]],
+        "ori_axis": [[2,3],[3,2]],
+        "tasks": [
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[1,1],[1,0]] },
+            { "type": "area" },
+            { "type": "axis_angle" },
+            { "type": "change_axis", "obj_axis": [[1,0],[0,1]] },
+            { "type": "axis_projection" }
+        ]
+    },
+    {
+        "group_name": "2d_task_4",
+        "vectors": [[2,8],[3,7],[4,6],[5,5],[6,4],[7,3],[8,2],[9,1],[10,0],[11,9],[12,8],[13,7]],
+        "ori_axis": [[0,1],[1,0]],
+        "tasks": [
+            { "type": "axis_projection" },
+            { "type": "area" },
+            { "type": "change_axis", "obj_axis": [[4,5],[5,4]] },
+            { "type": "axis_projection" },
+            { "type": "axis_angle" },
+            { "type": "area" }
+        ]
+    },
+    {
+        "group_name": "2d_task_5",
+        "vectors": [[1,3],[2,6],[3,9],[4,2],[5,5],[6,8],[7,1],[8,4],[9,7],[10,0],[11,3],[12,6],[13,9]],
+        "ori_axis": [[1,2],[2,1]],
+        "tasks": [
+            { "type": "change_axis", "obj_axis": [[1,-2],[-2,1]] },
+            { "type": "axis_angle" },
+            { "type": "area" },
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[1,0],[0,1]] }
+        ]
+    },
+    {
+        "group_name": "3d_task_1",
+        "vectors": [[0,0,0],[1,2,3],[2,4,6],[3,1,2],[4,3,1],[5,5,5],[6,2,4],[7,7,1],[8,6,2],[9,8,3],[10,9,4],[11,0,5]],
+        "ori_axis": [[1,0,0],[0,1,0],[0,0,1]],
+        "tasks": [
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[1,1,0],[1,-1,0],[0,0,1]] },
+            { "type": "axis_angle" },
+            { "type": "area" },
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[1,0,0],[0,1,0],[0,0,1]] },
+            { "type": "area" }
+        ]
+    },
+    {
+        "group_name": "3d_task_2",
+        "vectors": [[1,1,1],[2,0,3],[3,5,2],[4,2,7],[5,7,4],[6,4,9],[7,9,6],[8,6,1],[9,1,8],[10,8,3],[11,3,10],[12,10,5]],
+        "ori_axis": [[1,1,1],[1,1,-1],[1,-1,0]],
+        "tasks": [
+            { "type": "area" },
+            { "type": "axis_angle" },
+            { "type": "change_axis", "obj_axis": [[2,1,3],[1,2,1],[3,1,2]] },
+            { "type": "axis_projection" },
+            { "type": "area" },
+            { "type": "axis_angle" }
+        ]
+    },
+    {
+        "group_name": "3d_task_3",
+        "vectors": [[0,5,2],[1,4,3],[2,3,4],[3,2,5],[4,1,6],[5,0,7],[6,-1,8],[7,-2,9],[8,-3,0],[9,-4,1],[10,-5,2],[11,-6,3]],
+        "ori_axis": [[2,3,1],[3,2,1],[1,1,2]],
+        "tasks": [
+            { "type": "axis_projection" },
+            { "type": "axis_angle" },
+            { "type": "change_axis", "obj_axis": [[1,0,0],[0,1,0],[0,0,1]] },
+            { "type": "area" },
+            { "type": "axis_projection" },
+            { "type": "axis_angle" }
+        ]
+    },
+    {
+        "group_name": "3d_task_4",
+        "vectors": [[2,8,4],[3,7,5],[4,6,6],[5,5,7],[6,4,8],[7,3,9],[8,2,0],[9,1,1],[10,0,2],[11,9,3],[12,8,4],[13,7,5],[14,6,6]],
+        "ori_axis": [[0,1,0],[0,0,1],[1,0,0]],
+        "tasks": [
+            { "type": "axis_angle" },
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[4,5,6],[5,6,4],[6,4,5]] },
+            { "type": "area" },
+            { "type": "axis_angle" },
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[1,0,0],[0,1,0],[0,0,1]] }
+        ]
+    },
+    {
+        "group_name": "3d_task_5",
+        "vectors": [[1,3,5],[2,6,0],[3,9,5],[4,2,0],[5,5,5],[6,8,0],[7,1,5],[8,4,0],[9,7,5],[10,0,0],[11,3,5],[12,6,0],[13,9,5]],
+        "ori_axis": [[1,2,3],[2,3,1],[3,1,2]],
+        "tasks": [
+            { "type": "change_axis", "obj_axis": [[1,-2,3],[-2,3,-1],[3,-1,2]] },
+            { "type": "area" },
+            { "type": "axis_projection" },
+            { "type": "axis_angle" },
+            { "type": "change_axis", "obj_axis": [[1,0,0],[0,1,0],[0,0,1]] },
+            { "type": "area" }
+        ]
+    },
+    {
+        "group_name": "8d_task_1",
+        "vectors": [[0,0,0,0,0,0,0,0],[1,2,3,4,5,6,7,8],[2,4,6,8,10,12,14,16],[3,1,2,5,4,7,6,9]],
+        "ori_axis": [[1,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0],[0,0,1,0,0,0,0,0],[0,0,0,1,0,0,0,0],[0,0,0,0,1,0,0,0],[0,0,0,0,0,1,0,0],[0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,1]],
+        "tasks": [
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[1,1,0,0,0,0,0,0],[1,-1,0,0,0,0,0,0],[0,0,1,1,0,0,0,0],[0,0,1,-1,0,0,0,0],[0,0,0,0,1,1,0,0],[0,0,0,0,1,-1,0,0],[0,0,0,0,0,0,1,1],[0,0,0,0,0,0,1,-1]] },
+            { "type": "area" },
+            { "type": "axis_angle" },
+            { "type": "axis_projection" }
+        ]
+    },
+    {
+        "group_name": "9d_task_1",
+        "vectors": [[1,1,1,1,1,1,1,1,1],[2,0,3,0,4,0,5,0,6],[3,5,2,7,1,9,0,8,4]],
+        "ori_axis": [[1,1,1,0,0,0,0,0,0],[1,1,-1,0,0,0,0,0,0],[1,-1,0,0,0,0,0,0,0],[0,0,0,1,1,1,0,0,0],[0,0,0,1,1,-1,0,0,0],[0,0,0,1,-1,0,0,0,0],[0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,1,1,-1],[0,0,0,0,0,0,1,-1,0]],
+        "tasks": [
+            { "type": "area" },
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[2,1,3,4,5,6,7,8,9],[1,2,1,5,6,4,8,9,7],[3,1,2,6,4,5,9,7,8],[4,5,6,2,1,3,7,8,9],[5,6,4,1,2,1,8,9,7],[6,4,5,3,1,2,9,7,8],[7,8,9,4,5,6,2,1,3],[8,9,7,5,6,4,1,2,1],[9,7,8,6,4,5,3,1,2]] },
+            { "type": "axis_angle" },
+            { "type": "axis_projection" },
+            { "type": "area" }
+        ]
+    },
+    {
+        "group_name": "10d_task_1",
+        "vectors": [[0,5,2,7,1,8,3,9,4,0],[1,4,3,6,2,7,4,8,5,1]],
+        "ori_axis": [[2,3,1,5,4,7,6,9,8,0],[3,2,1,4,5,6,7,8,9,0],[1,1,2,3,3,4,4,5,5,0],[5,4,3,2,1,9,8,7,6,0],[4,5,6,7,8,1,2,3,9,0],[7,6,5,4,3,8,9,1,2,0],[6,7,8,9,1,2,3,4,5,0],[9,8,7,6,5,4,3,2,1,0],[8,9,1,2,3,5,4,6,7,0],[0,0,0,0,0,0,0,0,0,1]],
+        "tasks": [
+            { "type": "area" },
+            { "type": "axis_angle" },
+            { "type": "change_axis", "obj_axis": [[1,0,0,0,0,0,0,0,0,0],[0,1,0,0,0,0,0,0,0,0],[0,0,1,0,0,0,0,0,0,0],[0,0,0,1,0,0,0,0,0,0],[0,0,0,0,1,0,0,0,0,0],[0,0,0,0,0,1,0,0,0,0],[0,0,0,0,0,0,1,0,0,0],[0,0,0,0,0,0,0,1,0,0],[0,0,0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,0,0,1]] },
+            { "type": "axis_projection" },
+            { "type": "axis_angle" }
+        ]
+    },
+    {
+        "group_name": "8d_task_2",
+        "vectors": [[2,8,4,1,7,3,9,5],[3,7,5,2,6,4,8,6]],
+        "ori_axis": [[0,1,0,0,0,0,0,0],[0,0,1,0,0,0,0,0],[0,0,0,1,0,0,0,0],[0,0,0,0,1,0,0,0],[0,0,0,0,0,1,0,0],[0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0]],
+        "tasks": [
+            { "type": "axis_angle" },
+            { "type": "axis_projection" },
+            { "type": "change_axis", "obj_axis": [[4,5,6,7,8,9,1,2],[5,6,7,8,9,1,2,4],[6,7,8,9,1,2,4,5],[7,8,9,1,2,4,5,6],[8,9,1,2,4,5,6,7],[9,1,2,4,5,6,7,8],[1,2,4,5,6,7,8,9],[2,4,5,6,7,8,9,1]] },
+            { "type": "area" },
+            { "type": "axis_projection" },
+            { "type": "axis_angle" }
+        ]
+    },
+    {
+        "group_name": "10d_task_2",
+        "vectors": [[1,3,5,7,9,2,4,6,8,0],[2,6,0,8,1,4,8,2,7,1]],
+        "ori_axis": [[1,2,3,4,5,6,7,8,9,0],[2,3,4,5,6,7,8,9,0,1],[3,4,5,6,7,8,9,0,1,2],[4,5,6,7,8,9,0,1,2,3],[5,6,7,8,9,0,1,2,3,4],[6,7,8,9,0,1,2,3,4,5],[7,8,9,0,1,2,3,4,5,6],[8,9,0,1,2,3,4,5,6,7],[9,0,1,2,3,4,5,6,7,8],[0,1,2,3,4,5,6,7,8,9]],
+        "tasks": [
+            { "type": "axis_projection" },
+            { "type": "area" },
+            { "type": "change_axis", "obj_axis": [[1,-2,3,-4,5,-6,7,-8,9,0],[-2,3,-4,5,-6,7,-8,9,0,1],[3,-4,5,-6,7,-8,9,0,1,-2],[-4,5,-6,7,-8,9,0,1,-2,3],[5,-6,7,-8,9,0,1,-2,3,-4],[-6,7,-8,9,0,1,-2,3,-4,5],[7,-8,9,0,1,-2,3,-4,5,-6],[-8,9,0,1,-2,3,-4,5,-6,7],[9,0,1,-2,3,-4,5,-6,7,-8],[0,1,-2,3,-4,5,-6,7,-8,9]] },
+            { "type": "axis_projection" },
+            { "type": "axis_angle" },
+            { "type": "area" }
+        ]
+    }
+]
+with open("output.json","w",encoding='utf-8') as f:
+    json.dump(data,f,ensure_ascii=False,indent=4)
+class CoordinateSystem:
+    def _init_(self,basis_vectors,vectors):
+        self.basis = np.array(basis_vectors,dtype = np.float64)#把基向量存到对象里,坐标系变换必须用小数
+        #array可以理解为升级版的列表，可以进行数学运算
+        # dtype = np.float64强制把数字变成高精度小数，告诉numpy这个数组中的数字，要用什么格式存
+        self.vectory = np.array(vectors,dtype = np.float64)#把向量存到对象里
+        self.dim = self.basis.shape[1]#第一位=列数=空间维度，先数行，再数列，从0开始数
+        self.basis_count = self.basis.shape[0]#第0位=行数=基向量个数
+#以上是把输入变成矩阵，方便计算
+#一组向量要成为基，必须满足向量的个数等于空间的维度，且这组向量线性无关
+def is_valid_basis(self):
+#条件一：检查向量个数是否等于维度
+    if self.basis_count != self.dim:
+        return False,"线性相关"
+    #条件2：检查线性无关性
+    #方法A：计算行列式 det
+    det = np.linalg.det(self.basis)
+    #np.linalg是numpy库中的线性代数模块is
+    #方法B：计算矩阵的秩 rank
+    rank = np.linalg.matrix_rank(self.basis)
+    #如果行列式接近与0(奇异) 或者 秩小于维度，则线性相关
+    if abs(det) < 1e-10 or rank != self.dim:
+        return False,"线性相关"
+    #用1e-10是为了避免计算机浮点计算误差，很难算出理论上绝对的0
+    #秩代表矩阵中线性无关的行/列向量的最大个数，如果秩等于维度，说明所有向量都有用，没有冗余
+    #为什么用两种方法：det快，但只适用于方阵，并且不稳定
+    #有些接近奇异的矩阵，计算机算出的det会爆炸式的变大或者变小，误差极大
+    #rank任何矩阵都能用，但是慢
+    #两个条件都满足，合法基
+    return True,"合法"
+def transform_to(self,target_basis):
+#将当前坐标系的向量转移到目标坐标系，并更新当前坐标系为目标坐标系
+    target_system = CoordinateSystem(f"target_{self.name}",target_basis)
+#计算变换矩阵：目标基逆矩阵*当前基
+    transform_matrix = np.linalg.inv(target_system.basis) @self.basis
+#更新所有向量的坐标
+    self.basis = [transform_matrix @ vec for vec in self.vectory]
+#更新当前坐标系的基
+    self.basis = target_system.basis
+    self.name = target_system.name
+    return self.vectors
+#投影计算
+def project(self):
+#计算每个向量在当前坐标系各轴上的投影长度
+    projections = []#储存所有向量投影结果
+    for vec in self.vectors:#外层循环遍历每个向量，内层循环遍历每个坐标轴
+        proj = []
+        for i in range(self.dim):
+            #投影长度等于向量与基向量的点积/基向量的模长
+            axis = self.basis[:,i]#取出第i个基向量（列向量）
+            proj_len = np.dot(vec,axis)/np.linalg.norm(axis)
+            proj.append(proj_len)
+        projections.append(proj)#将每个向量投影结果存进projections并返回
+    return projections
+#夹角计算
+def angle_with_axes(self):
+    #计算每个向量与当前坐标系各轴夹角（弧度）
+    angles = []
+    for vec in self.vectors:
+        vec_norm = np.linalg.norm(vec)
+        if vec_norm == 0:
+            angles.append([0.0]*self.dim)
+            continue
+        angle_list = []
+        for i in range(self.dim):
+            axis = self.basis[:,i]
+            axis_norm = np.linalg.norm(axis)
+            #夹角公式：cosa = (向量*基向量）/（|向量|*|基向量|）
+            cos_theta = np.dot(vec,axis)/(axis_norm*vec_norm)
+            #防止数值误差导致cosa超出[-1,1]
+            cos_theta = np.clip(cos_theta,-1.0,1.0)
+            angle = np.arccos(cos_theta)
+            angle_list.append(angle)
+        angles.append(angle_list )
+    return angles
+#面积缩放倍数计算
+def area_scale_factor(self):
+    #计算当前坐标系相对直角坐标系的面积/体积缩放倍数（二维为面积，三维为体积）
+    #缩放倍数 = 基向量构成矩阵的行列式的绝对值
+    return abs(np.linalg.det(self.basis))#abs表示取绝对值，得到面积/体积缩放倍数
+#加载json文件
+def load_json(file_path):
+    #加载json文件并解析为坐标系对象
+    with open(file_path,'r',encoding='utf-8') as f:#打开json文件并读取内容
+        data = json.load(f)#将json内容解析为python字典
+        basis = data['basis_vectors']#提取基向量列表
+        vectors = [np.array(vec) for vec in data['vectors']]#将向量列表转换为np数组
+    return CoordinateSystem(data['name'],basis,vectors)#创建并返回坐标系对象
+#执行任务列表
+def run_task(system, tasks):
+    results = {}
+    for task in tasks:
+        task_type = task['type']
+        if task_type == 'transform':
+            target_basis = task['target_basis']
+            try:
+                transformed_vectors = system.transform_to(target_basis)
+                results[task_type] = {
+                    'status':'success',
+                    'transformed_vectors':[vec.tolist() for vec in transformed_vectors],
+                    'new_basis':system.basis.T.tolist()
+                }
+            except ValueError as e:
+                results[task_type] = {'status':'failed','reason':str(e)}
+        elif task_type == 'project':
+            projections = system.project()
+            results[task_type] = {'projections':projections}
+        elif task_type == 'angle':
+            angles = system.angle_with_axes()
+            results[task_type] = {'angles_rad':angles}
+        elif task_type == 'area':
+            scale = system.area_scale_factor()
+            results[task_type] = {'scale_factor':scale}
+        else:
+            results[task_type] = {'status':'failed','reason':'未知任务类型'}
+    return results
+
+
+'''
+#思考题  
+1.对于有向图，有权图，公式哪些参数需要改变？
+
+  有向图要调整权重矩阵的行和邻接关系定义，有权图要将邻接值改为边权重并重新计算权重系数
+
+2.尝试推导公式的矩阵形式
+
+  X（t+1）=WX（t）
+
+3.所有智能体状态最终趋于一致，一致值为多少？
+在各种因素影响下，智能体状态还会趋于一致吗？
+
+  一致值为初始值的加权平均；
+  不一定
+
+4.理解离散时间和连续时间下算法的异同
+
+  离散时间按固定时间步迭代；
+  连续时间，状态随时间连续变化（微分方程）
+
+
 #markdown使用方法
 前后两个*或者下划线或CTRL加b为加粗，一个或许ctrl加i为斜体，引用用大于号，#几级标题
 >引用
@@ -263,10 +610,3 @@ python使用json库前，要输入import json来导入
 
 若E是无向边(简称边)的有限集合时，则图G为无向图。边是顶点的无序对，记为(v, w)或(w,v),因为(v,w)=(w,v), 其中v,w是顶点。可以说顶点w和顶点v互为邻接点。边(v, w)依附于顶点w和v，或者说边(v, w)和顶点v, w相关联。  
 
-#  
-#思考题  
-1.对于有向图，有权图，公式哪些参数需要改变？
-2.尝试推导公式的矩阵形式
-3.所有智能体状态最终趋于一致，一致值为多少？
-在各种因素影响下，智能体状态还会趋于一致吗？
-4.理解离散时间和连续时间下算法的异同
